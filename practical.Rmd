@@ -1,0 +1,407 @@
+---
+title: "Outbreak Detection"
+output: html_document
+date: "2024-11-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+
+## Expected learning outcomes
+
+By the end of this session, participants should be able to:
+
+- understand the basics principles of outbreak detection including creating and expectation, threshold and alarm
+
+- implement & apply different outbreak detection methods to timeseries with different characteristics and understand advantages and disadvantages of different methods
+
+- get to know the SignalDetectionTool and be able to use functions for outbreak detection from the tool as well as the shiny app
+
+## Preparations
+
+Required source code to load
+
+```{r, include = TRUE, source-Rscript}
+source("source_outbreak_det.R")
+```
+
+Required packages
+
+```{r, load-packages, include = TRUE}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(surveillance)
+library(tidyr)
+library(SignalDetectionTool)
+```
+
+# Section 1: Implement your first outbreak detection algorithm
+
+We will now import the first dataset to analyse.
+
+```{r, load-dataset}
+ts0 <- readRDS("data/sim0.Rds")
+```
+
+## Task 1.1 
+Visualise the first timeseries ts0 using the function `plot_ts()` which is provided in the source_outbreak_det.R script.
+What do you observe? What characteristics does this timeseries have? Do you see any potential outbreaks?
+
+```{r, vis-dataset-task-1.1}
+plot_ts(ts0)
+```
+
+## Task 1.2
+
+We want to apply a simple outbreak detection method to the last timepoint of this timeseries.
+The baseline/expectation should be the mean of all observations before current time point. For calculating a threshold we are going to use the 95% quantile of the Poisson distribution. As later in this practical we want to add other algorithms we have an additional parameter called method. 
+Please fill all the spots with ____ to make this function work. 
+
+```{r, outbreak-detection-algo-task-1.2}
+
+detect_outbreaks <- function(ts, method = "average"){
+
+  length_ts <- nrow(ts)
+  fit_data <- ts[1:(length_ts - 1),]
+  pred_data <- ts[length_ts,]
+  
+  if (method == "average"){
+    model <- glm(formula = _____, data = fit_data, family = poisson())
+  }
+
+  pred <- predict.glm(model,
+                      newdata = pred_data)
+  mean <- exp(pred)
+
+  threshold <- qpois(____,____)
+  alarms <- pred_data$cases > ______
+
+  pred_data <- pred_data %>%
+    mutate(expectation = mean,
+               threshold = threshold,
+               alarms = alarms)
+
+
+  fit_data <- fit_data %>% mutate(expectation = model$fitted.values,
+                      threshold = qpois(0.95, model$fitted.values),
+                      alarms = NA_real_)
+
+  bind_rows(fit_data,
+            pred_data)
+
+}
+```
+
+## Task 1.3
+
+Now apply the `detect_outbreaks()` function for outbreak detection to the timeseries and plot the result using `plot_ts()` with the additional argument `with_signals = TRUE`. Does what you observe match your expecations?
+
+```{r,apply-detect-outbreaks-task-1.3}
+
+
+```
+
+
+# Section 2:  Apply the outbreak detection to multiple weeks
+
+We want to extend the algorithm so that it can not only be applied to the most recent week but multiple past weeks. For this we implement a function which consists of for-loop around our function `detect_outbreaks()`. 
+
+## Task 2.1
+Please fill the ____ in this function. 
+```{r, outbreak-detection-multiple-weeks-task-2.1}
+detect_outbreaks_multiple_weeks <- function(ts, method = "average", number_of_weeks = 4){
+
+  signal_results <- data.frame()
+  len_ts <- nrow(ts)
+
+  for (i in seq(0, number_of_weeks - 1, 1)){
+    ts <- ts[1:(len_ts - i),]
+
+    ts_with_signals <- detect_outbreaks(ts,method = method)
+    
+    # get the last row of the dataset which is the row we generated signals for
+    signals <- _____________
+    signal_results <- bind_rows(signal_results,signals)
+
+    if (i == number_of_weeks - 1){
+      # want to get the modeled expectation and threshold for the data used for fitting as well
+      # take the results from the timeseries with the earliest timepoint where signals are generated for
+      ts_without_signal_weeks <- ts_with_signals[1:(nrow(ts_with_signals) - 1),]
+    }
+
+  }
+  # put timeseries and signal results together in one df
+  ts_without_signal_weeks %>%
+    # bind the obtained signal results for all weeks
+    bind_rows(______) %>%
+    arrange(date)
+}
+```
+
+## Task 2.2
+
+Apply the `detect_outbreaks_multiple_weeks()` to the ts0 for the most recent 4 weeks and visualise the result.
+
+```{r, average-multiple-weeks-task-2.2}
+
+```
+
+# Section 3: Improve the first simple outbreak detection algorithm
+
+We will split into groups now and each group obtains a different timeseries. Please discuss within your groups and work together. At the end one person of each group will give a short (max 5 min) presentation of the results to everyone in the plenum. Please only work on the parts of this .rmd which belongs to your group.
+
+## Group 1: 
+
+We now load another timeseries and visualise it. 
+
+```{r,group-1-timeseries-vis}
+ts1 <- readRDS("data/sim1.Rds")
+plot_ts(ts1)
+```
+
+### Task 3.1
+How would you describe this timeseries? What characteristics do you see?
+
+### Task 3.2
+Apply the simple average outbreak detection algorithm to this timeseries for the last 4 weeks and plot the results. 
+
+```{r,group-1-average-application}
+
+
+```
+
+### Task 3.3
+What do you observe? Do you think this algorithm is suited for this timeseries? 
+
+### Task 3.4
+What are your ideas to improve this algorithm? Discuss in the group.
+
+### Task 3.5
+Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
+```{r,group-1-new-algo-task-3.5}
+
+
+```
+
+### Task 3.6
+
+Apply your new method to the timeseries for the last 4 weeks and visualise the result.
+
+```{r,group-1-new-algo-application-task-3.6}
+
+
+```
+### Task 3.7
+Did this improve the outbreak detection? 
+
+### Task 3.8
+Prepare to give a max. 5min presentation of your findings to the plenum. 
+
+## Group 2:
+We now load another timeseries and visualise it.
+```{r,group-2-timeseries-vis}
+ts2 <- readRDS("data/sim2.Rds")
+plot_ts(ts2)
+```
+
+### Task 3.1
+
+How would you describe this timeseries? What characteristics do you see?
+
+### Task 3.2
+Apply the simple average outbreak detection algorithm to this timeseries for the last 4 weeks and plot the results. 
+```{r,group-2-average-application-task-3.2}
+
+
+```
+
+### Task 3.3
+What do you observe? Do you think this algorithm is suited for this timeseries? 
+
+### Task 3.4
+What are your ideas to improve this algorithm? Discuss in the group.
+
+### Task 3.5
+Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
+
+```{r,group-2-new-algo-task-3.5}
+
+
+```
+
+### Task 3.6
+
+Apply your new method to the timeseries for the last 4 weeks and visualise the result.
+
+```{r,group-2-new-algo-application-task-3.6}
+
+
+```
+
+### Task 3.7
+
+Did this improve the outbreak detection? 
+
+### Task 3.8
+Prepare to give a max. 5min presentation of your results to the plenum. 
+
+## Group 3:
+We now load another timeseries and visualise it. 
+
+```{r,group-3-timeseries-vis}
+ts3 <- readRDS("data/sim3.Rds")
+plot_ts(ts3)
+```
+
+### Task 3.1
+How would you describe this timeseries? What characteristics do you see?
+
+### Task 3.2
+
+Apply the simple average outbreak detection algorithm to this timeseries for the last 4 weeks and plot the results. 
+
+```{r,group-3-average-application}
+
+
+```
+
+### Task 3.3
+What do you observe? Do you think this algorithm is suited for this timeseries? 
+
+### Task 3.4
+What are your ideas to improve this algorithm? Discuss in the group.
+
+### Task 3.5
+Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
+
+Help: You can use the function `create_season_data()` to add sine and cosine terms to your timeseries data before applying the new algorithm which can use these terms.
+
+```{r,group-3-new-algo-task-3.5}
+
+
+```
+
+### Task 3.6
+Apply your new method to the timeseries for the last 4 weeks and visualise the result.
+
+```{r,group-3-new-algo-application-task-3.6}
+
+
+
+```
+
+### Task 3.7
+Did this improve the outbreak detection? 
+
+### Task 3.8
+Prepare to give a max. 5min presentation of your results to the plenum.
+
+# Section 4: From linelist to signals
+## Section 4.1: Using dplyr and the surveillance package
+
+In the previous section you were always provided datasets which were already showing aggregated case counts by week and year. In the real world you will often start with a linelist of cases and need to aggregate it first to apply signal detection methods. In a previous practical of this module you already learned how to get from a linelist to an aggregated timeseries. We will shortly refresh this knowledge here and then further build and extend on it.
+
+```{r,load-linelist}
+# Load the dataset
+data_linelist <- read.csv("data/linelist.csv")
+```
+
+### Task 4.1.1
+Quickly familiarise yourself with the dataset. What variables does it contain and how does it look like? 
+
+We will aggregate the dataset to obtain the number of cases in each week of the year based on the reporting date `date_report`. 
+
+```{r,aggregate-linelist}
+input_aggr <- data_linelist %>%
+  mutate(week = isoweek(date_report),
+         year = isoyear(date_report)) %>%
+  summarise(cases = n(), .by = c(week,year))
+```
+
+### Task 4.1.2
+Do you think we are done now? Do you have any thoughts what could be a problem here? Please stop for a second before continuing to read to think about this.
+
+
+
+If there are some weeks where no cases were reported these weeks will be missing in the `input_aggr`. We will apply a function which is provided in the source script which adds these missing weeks with number of cases set to 0. 
+```{r,fill-missing-weeks}
+input_aggr_complete <- complete_weeks_aggr_data(input_aggr) 
+```
+
+### Task 4.1.3
+Is the `input_aggr_complete` longer than the original `input_aggr_complete`?
+
+
+Now let's apply a outbreak detection method from the surveillance package. There are a lot of different R libraries containing signal detection methods and we want to shortly show you The surveillance package as it is a very popular package and still frequently used in this field.
+
+Unfortunately the surveillance package uses its own data format to apply outbreak detection to a timeseries and thus first we need to transform our aggregated timeseries into this "sts" format.
+
+```{r,transform-to-sts}
+sts_timeseries <- sts(input_aggr_complete$cases,
+                  start = c(
+                    input_aggr_complete$year[1],
+                    input_aggr_complete$week[1]
+                  ),
+                  frequency = 52
+) 
+```
+
+### Task 4.1.4
+Apply the EarsC algorithm `earsC()` to the timeseries and plot the results using the `plot()` function from the surveillance package. Use the default values of both functions and look up how to use the functions using ?earsC() or ?plot()
+
+```{r,apply-ears-surveillance-task-4.1.4}
+
+
+```
+
+### Task 4.1.5
+Have a look at the visualisation. Do you understand everything? If you have any questions about it discuss with your partner or ask one of the facilitators.
+
+### Task 4.1.6
+Let's say you are interested in more detailed analysis and want to stratify by age group. This means you want to apply signal detection methods to a timeseries for each age group. How would you need to change the steps above to do this? Discuss with a partner.
+
+## Section 4.2: Usage of functions from the SignalDetectionTool
+
+The R library SignalDetectionTool which was developed within the Joint Action United4Surveillance provides functions for you to simplify this process. We start again with the linelist of cases and apply the earsC algorithm to it but we use functions from the tool.
+
+```{r,apply-ears-tool}
+ears_results_tool <- data_linelist %>%
+  preprocess_data() %>%
+  get_signals(method = "ears", number_of_weeks = 6)
+```
+
+As you can see we do not need to do add weeks and year to the data_linelist, do not need to aggregate and transform to sts. All of this is done inside the functions `preprocess_data()` (adding of week and year and other preprocessing) and `get_signals()` (aggregating,transforming to sts if necessary,...) .
+
+We can now plot the results using the plotting function from the SignalDetectionTool.
+```{r,vis-ears-tool}
+plot_time_series(ears_results_tool, interactive = TRUE)
+```
+
+Now let's do the desired stratified analysis by age group.
+
+### Task 4.2.1
+Have a look at the parameters of `get_signals()` and add the necessary parameter for getting signals for each age group in our dataset.
+
+```{r,apply-ears-agegroup-tool-task-4.2.1}
+
+
+```
+
+### Task 4.2.3
+Have a look at the signal results dataframe `ears_agegroup_results_tool` and visualise one age group of your choice using the `plot_time_series()` function.
+```{r,vis-ears-agegroup-tool-task-4.2.3}
+
+
+```
+
+## Section 4.3: Usage of the shiny app SignalDetectionTool
+Now we want to go even one step further and use the shiny app SignalDetectionTool.
+In general to start the tool you need to load the package SignalDetectionTool using `library(SignalDetectionTool)` (we already did this here) and then type `run_app()` into your Console in Rstudio.
+
+### Task 4.3.1
+Run the app and upload the linelist.csv inside the data folder and perform signal analysis stratified by age_group, sex and county.
