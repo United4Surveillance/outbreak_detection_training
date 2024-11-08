@@ -64,7 +64,7 @@ Please fill all the spots with ____ to make this function work.
 
 ```{r, outbreak-detection-algo-task-1.2}
 
-detect_outbreaks <- function(ts, method = "average"){
+detect_outbreaks <- function(ts, method){
 
   length_ts <- nrow(ts)
   # split the dataset
@@ -106,7 +106,7 @@ detect_outbreaks <- function(ts, method = "average"){
 
 ## Task 1.3
 
-Now apply the `detect_outbreaks()` function for outbreak detection to the timeseries and plot the result using `plot_ts()` with the additional argument `with_signals = TRUE`. Does what you observe match your expecations?
+Now apply the `detect_outbreaks()` function for outbreak detection to the timeseries using the method "average" and plot the result using `plot_ts()` with the additional argument `with_signals = TRUE`. Does what you observe match your expecations?
 
 ```{r,apply-detect-outbreaks-task-1.3}
 
@@ -121,7 +121,7 @@ We want to extend the algorithm so that it can not only be applied to the most r
 ## Task 2.1
 Please fill the ____ in this function. 
 ```{r, outbreak-detection-multiple-weeks-task-2.1}
-detect_outbreaks_multiple_weeks <- function(ts, method = "average", number_of_weeks = 4){
+detect_outbreaks_multiple_weeks <- function(ts, method, number_of_weeks = 4){
 
   signal_results <- data.frame()
   len_ts <- nrow(ts)
@@ -152,7 +152,7 @@ detect_outbreaks_multiple_weeks <- function(ts, method = "average", number_of_we
 
 ## Task 2.2
 
-Apply the `detect_outbreaks_multiple_weeks()` to the ts0 for the most recent 4 weeks and visualise the result.
+Apply the `detect_outbreaks_multiple_weeks()` to the ts0 using the method "average" for the most recent 4 weeks and visualise the result.
 
 ```{r, average-multiple-weeks-task-2.2}
 
