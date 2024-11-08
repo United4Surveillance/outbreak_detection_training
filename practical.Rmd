@@ -79,18 +79,23 @@ detect_outbreaks <- function(ts, method = "average"){
   }
   # we generate an expectation and threshold for visualisation purposes for the data used for fitting
   # model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
-  fit_data <- fit_data %>% mutate(expectation = model$fitted.values,
-                      threshold = qpois(0.95, expectation),
-                      alarms = NA_real_)
+  fit_data <- fit_data %>% 
+    mutate(
+      expectation = model$fitted.values,
+      threshold = qpois(0.95, expectation),
+      alarms = NA_real_
+      )
   
   # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
   pred <- predict.glm(model,
                       newdata = pred_data)
 
   pred_data <- pred_data %>%
-    mutate(expectation = exp(pred),
-               threshold = qpois(___, ___),
-               alarms = pred_data$cases > ____)
+    mutate(
+      expectation = exp(pred),
+      threshold = qpois(___, ___),
+      alarms = pred_data$cases > ____
+      )
   
   # combine the two datasets back together
   bind_rows(fit_data,
@@ -320,9 +325,11 @@ We will aggregate the dataset to obtain the number of cases in each week of the 
 
 ```{r,aggregate-linelist}
 input_aggr <- data_linelist %>%
-  mutate(week = isoweek(date_report),
-         year = isoyear(date_report)) %>%
-  summarise(cases = n(), .by = c(week,year))
+  mutate(
+    week = isoweek(date_report),
+    year = isoyear(date_report)
+  ) %>%
+  summarise(cases = n(), .by = c(week, year))
 ```
 
 ### Task 4.1.2
@@ -345,12 +352,12 @@ Unfortunately the surveillance package uses its own data format to apply outbrea
 
 ```{r,transform-to-sts}
 sts_timeseries <- sts(input_aggr_complete$cases,
-                  start = c(
-                    input_aggr_complete$year[1],
-                    input_aggr_complete$week[1]
-                  ),
-                  frequency = 52
-) 
+  start = c(
+    input_aggr_complete$year[1],
+    input_aggr_complete$week[1]
+  ),
+  frequency = 52
+)
 ```
 
 ### Task 4.1.4
