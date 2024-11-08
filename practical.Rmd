@@ -67,30 +67,32 @@ Please fill all the spots with ____ to make this function work.
 detect_outbreaks <- function(ts, method = "average"){
 
   length_ts <- nrow(ts)
+  # split the dataset
+  # datapoints we use for model fitting, i.e. we build our expecation on
   fit_data <- ts[1:(length_ts - 1),]
+  # the last datapoint we want to do signal detection for
   pred_data <- ts[length_ts,]
   
+  # fit the model
   if (method == "average"){
     model <- glm(formula = _____, data = fit_data, family = poisson())
   }
-
+  # we generate an expectation and threshold for visualisation purposes for the data used for fitting
+  # model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
+  fit_data <- fit_data %>% mutate(expectation = model$fitted.values,
+                      threshold = qpois(0.95, expectation),
+                      alarms = NA_real_)
+  
+  # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
   pred <- predict.glm(model,
                       newdata = pred_data)
-  mean <- exp(pred)
-
-  threshold <- qpois(____,____)
-  alarms <- pred_data$cases > ______
 
   pred_data <- pred_data %>%
-    mutate(expectation = mean,
-               threshold = threshold,
-               alarms = alarms)
-
-
-  fit_data <- fit_data %>% mutate(expectation = model$fitted.values,
-                      threshold = qpois(0.95, model$fitted.values),
-                      alarms = NA_real_)
-
+    mutate(expectation = exp(pred),
+               threshold = qpois(___, ___),
+               alarms = pred_data$cases > ____)
+  
+  # combine the two datasets back together
   bind_rows(fit_data,
             pred_data)
 
