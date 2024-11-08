@@ -382,12 +382,8 @@ Add seasonal terms to the regression using sine and cosine.
 ### Task 3.5
 Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
 
-Help: You can use the function `create_season_data()` to add sine and cosine terms to your timeseries data before applying the new algorithm which can use these terms.
 
 ```{r,group-3-new-algo-task-3.5}
-ts3 <- ts3 %>%
-  create_season_data()
-
 detect_outbreaks <- function(ts, method = "average") {
   length_ts <- nrow(ts)
   # split the dataset
@@ -399,9 +395,16 @@ detect_outbreaks <- function(ts, method = "average") {
   # fit the model depending on the chosen method
   if (method == "average") {
     model <- glm(formula = cases ~ 1, data = fit_data, family = poisson())
-  } else if (method == "seasonality") {
+  } # first solution using sin and cos
+  else if (method == "seasonality") {
     model <- glm(formula = cases ~ 1 + sin + cos, data = fit_data, family = poisson())
+  } # second solution using the month factor
+  else if (method == "seasonality_month") {
+    model <- glm(formula = cases ~ 1 + month, data = fit_data, family = poisson())
   }
+
+
+
   # we generate an expectation and threshold for visualisation purposes for the data used for fitting
   # model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
   fit_data <- fit_data %>% mutate(
@@ -433,9 +436,16 @@ detect_outbreaks <- function(ts, method = "average") {
 ### Task 3.6
 Apply your new method to the timeseries for the last 4 weeks and visualise the result.
 
+Solution 1 using sin and cos
 ```{r,group-3-new-algo-application-task-3.6}
 ts3_with_signals_season <- detect_outbreaks_multiple_weeks(ts3, method = "seasonality")
 plot_ts(ts3_with_signals_season, with_signals = TRUE)
+```
+
+Solution 2 using month
+```{r,group-3-new-algo-application-task-3.6-solution2}
+ts3_with_signals_season_month <- detect_outbreaks_multiple_weeks(ts3, method = "seasonality_month")
+plot_ts(ts3_with_signals_season_month, with_signals = TRUE)
 ```
 
 ### Task 3.7

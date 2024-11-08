@@ -286,8 +286,6 @@ What are your ideas to improve this algorithm? Discuss in the group.
 ### Task 3.5
 Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
 
-Help: You can use the function `create_season_data()` to add sine and cosine terms to your timeseries data before applying the new algorithm which can use these terms.
-
 ```{r,group-3-new-algo-task-3.5}
 
 
