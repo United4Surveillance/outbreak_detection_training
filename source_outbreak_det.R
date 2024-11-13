@@ -13,47 +13,18 @@ plot_ts <- function(ts, with_signals = FALSE) {
     theme_bw()
 
   if (with_signals) {
-    ts <- ts %>%
-      mutate(category = if_else(!is.na(alarms), "Signal Detection weeks", "Training Data"))
-
-    plot <- ggplot(ts, aes(x = date, y = cases, fill = category)) + 
-      geom_bar(stat = "identity") +
-      geom_line(aes(x = date, y = threshold, color = "Threshold"), linewidth = 1) +
-      geom_line(aes(x = date, y = expectation, color = "Expectation"), linewidth = 1) +
-      {
-        if (any(ts$alarms == 1, na.rm = T)) geom_point(data = filter(ts, alarms == 1), aes(x = date, y = cases, color = "Signals"), shape = 4, size = 2, stroke = 2)
-      } +
-      labs(color = "") +
-      scale_color_manual(values = c("Threshold" = "blue", "Expectation" = "black", "Signals" = "red")) +
-      scale_fill_manual(values = c("Signal Detection weeks" = "orange", "Training Data" = "#999")) +
-      labs(color = NULL, fill = NULL) + # Removes titles for both color and fill legends
-      theme_bw() +
-      theme(legend.position = "bottom") +
-      guides(
-        fill = guide_legend(override.aes = list(shape = NA)) # Order bar legend second
-      )
-  }
-  plot
-}
-
-plot_ts2 <- function(ts, with_signals = FALSE) {
-  plot <- ggplot(ts, aes(x = date, y = cases)) +
-    geom_bar(stat = "identity") +
-    theme_bw()
-  
-  if (with_signals) {
     # Separate data for bars and lines
     ts_for_lines <- ts
-    
+
     ts <- ts %>%
       mutate(category = if_else(!is.na(alarms), "Signal Detection weeks", "Training Data"))
-    
+
     plot <- ggplot() +
       geom_bar(data = ts, aes(x = date, y = cases, fill = category), stat = "identity") +
       geom_line(data = ts_for_lines, aes(x = date, y = threshold, color = "Threshold"), linewidth = 1) +
       geom_line(data = ts_for_lines, aes(x = date, y = expectation, color = "Expectation"), linewidth = 1) +
       {
-        if (any(ts$alarms == 1, na.rm = TRUE)) 
+        if (any(ts$alarms == 1, na.rm = TRUE))
           geom_point(data = filter(ts, alarms == 1), aes(x = date, y = cases, color = "Signals"), shape = 4, size = 2, stroke = 2)
       } +
       labs(color = "") +
