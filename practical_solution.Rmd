@@ -485,7 +485,7 @@ input_aggr <- data_linelist %>%
 ```
 
 ### Task 4.1.2
-Do you think we are done now? Do you have any thoughts what could be a problem here?
+Do you think we are done now? Do you have any thoughts what could be a problem here? Please stop for a second before continuing to read to think about this.
 
 If there are some weeks where no cases were reported these weeks will be missing in the `input_aggr`. We will apply a function which is provided in the source script which adds these missing weeks with number of cases set to 0. 
 ```{r,fill-missing-weeks}
@@ -494,8 +494,6 @@ input_aggr_complete <- complete_weeks_aggr_data(input_aggr)
 
 ### Task 4.1.3
 Is the `input_aggr_complete` longer than the original `input_aggr_complete`?
-
-Yes it has one more row. Week 53 in year 2020 was added to the aggregated dataset with 0 cases.
 
 Now let's apply a outbreak detection method from the surveillance package. There are a lot of different R libraries containing signal detection methods and we want to shortly show you The surveillance package as it is a very popular package and still frequently used in this field.
 
@@ -525,8 +523,6 @@ Have a look at the visualisation. Do you understand everything? If you have any 
 
 ### Task 4.1.6
 Let's say you are interested in more detailed analysis and want to stratify by age group. This means you want to apply signal detection methods to a timeseries for each age group. How would you need to change the steps above to do this? Discuss with a partner.
-
-In the process of aggregation age_group would need to be added to the variables inside .by to group by age_group as well. The completion of the aggregated timeseries would need to be done for each age group. For each age group timeseries we need to generate a seperate sts object and then apply the earsC algorithm to each of them.
 
 ## Section 4.2: Usage of functions from the SignalDetectionTool
 
