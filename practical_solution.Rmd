@@ -85,9 +85,7 @@ detect_outbreaks <- function(ts, method) {
   )
 
   # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model,
-    newdata = pred_data
-  )
+  pred <- predict.glm(model, newdata = pred_data)
 
   pred_data <- pred_data %>%
     mutate(
@@ -97,10 +95,7 @@ detect_outbreaks <- function(ts, method) {
     )
 
   # combine the two data sets back together
-  bind_rows(
-    fit_data,
-    pred_data
-  )
+  bind_rows(fit_data, pred_data)
 }
 ```
 
@@ -219,9 +214,7 @@ detect_outbreaks <- function(ts, method) {
   )
 
   # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model,
-    newdata = pred_data
-  )
+  pred <- predict.glm(model, newdata = pred_data)
 
   pred_data <- pred_data %>%
     mutate(
@@ -231,10 +224,7 @@ detect_outbreaks <- function(ts, method) {
     )
 
   # combine the two data sets back together
-  bind_rows(
-    fit_data,
-    pred_data
-  )
+  bind_rows(fit_data, pred_data)
 }
 ```
 
@@ -310,9 +300,7 @@ detect_outbreaks <- function(ts, method) {
   )
 
   # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model,
-    newdata = pred_data
-  )
+  pred <- predict.glm(model, newdata = pred_data)
 
   pred_data <- pred_data %>%
     mutate(
@@ -322,10 +310,7 @@ detect_outbreaks <- function(ts, method) {
     )
 
   # combine the two data sets back together
-  bind_rows(
-    fit_data,
-    pred_data
-  )
+  bind_rows(fit_data, pred_data)
 }
 ```
 
@@ -414,9 +399,7 @@ detect_outbreaks <- function(ts, method) {
   )
 
   # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model,
-    newdata = pred_data
-  )
+  pred <- predict.glm(model, newdata = pred_data)
 
   pred_data <- pred_data %>%
     mutate(
@@ -426,10 +409,7 @@ detect_outbreaks <- function(ts, method) {
     )
 
   # combine the two data sets back together
-  bind_rows(
-    fit_data,
-    pred_data
-  )
+  bind_rows(fit_data, pred_data)
 }
 ```
 
