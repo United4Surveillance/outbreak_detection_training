@@ -459,11 +459,15 @@ Do you think we are done now? Do you have any thoughts what could be a problem h
 
 If there are some weeks where no cases were reported these weeks will be missing in the `input_aggr`. We will apply a function which is provided in the source script which adds these missing weeks with number of cases set to 0. 
 ```{r,fill-missing-weeks}
-input_aggr_complete <- complete_weeks_aggr_data(input_aggr)
+input_aggr_complete <- add_missing_isoweeks(input_aggr)
 ```
 
 ### Task 4.1.3
 Is the `input_aggr_complete` longer than the original `input_aggr_complete`?
+In case you want to find out which row was added you could use the following code:
+```{r,find-out-added-week}
+input_aggr_complete %>% anti_join(input_aggr,input_aggr_complete, by = c("week","year"))
+```
 
 Yes it has one more row. Week 53 in year 2020 was added to the aggregated dataset with 0 cases.
 

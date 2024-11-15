@@ -41,28 +41,42 @@ plot_ts <- function(ts, with_signals = FALSE) {
 }
 
 
+# Add missing isoweeks to an aggregated dataframe of case counts by year and week
+#
+#  This function takes a data frame containing year-week and case count and ensures
+#  that it includes all possible year-week combinations within the specified
+#  range. It fills in missing rows with 0 values for cases and returns the
+#  updated data frame.
+add_missing_isoweeks <- function(ts_aggregated) {
+  
+  ts_aggregated <- ts_aggregated %>%
+    mutate(date = isoweek_to_date(week, year))
+  
+  min_date <- min(ts_aggregated$date)
+  max_date <- max(ts_aggregated$date)
+  # Generate a sequence of dates from start to end date
+  # we add the date_end because the seq ends before date_end when there is a partial week remaining and we also want to have the isoweek of the date_end
+  date_seq <- c(seq.Date(from = as.Date(min_date), to = as.Date(max_date), by = "week"), max_date)
+  # Create a data frame with ISO weeks and ISO years
+  df_all_years_weeks <- data.frame(
+    year = isoyear(date_seq),
+    week = isoweek(date_seq)
+  ) %>%
+    # in case date_end is there twice due to adding before
+    distinct(year, week)
+  
+  # Merge the template with the original data to fill in missing rows
+  data_agg_complete <- merge(ts_aggregated, df_all_years_weeks, by = c("year", "week"), all = TRUE) %>%
+    dplyr::select(-date) %>%
+    replace_na(list(cases = 0)) %>% 
+    arrange(year, week)
+}
 
-complete_weeks_aggr_data <- function(ts_aggregated) {
-  min_isoyear <- min(ts_aggregated$year)
-  max_isoyear <- max(ts_aggregated$year)
-  last_week <- max(ts_aggregated %>%
-    filter(year == max_isoyear) %>%
-    pull(week))
-
-  years <- seq(min_isoyear, max_isoyear, 1)
-  week_year_grid <- bind_rows(lapply(years, function(year) {
-    # Check if the last day of the year is in week 53
-    last_day <- as.Date(paste0(year, "-12-31"))
-    max_week <- ifelse(isoweek(last_day) == 53, 53, 52)
-
-    # Generate all weeks for the year
-    expand_grid(year = year, week = 1:max_week)
-  }))
-  # remove all weeks in after the last week in the original aggregated dataset
-  week_year_grid <- week_year_grid %>%
-    filter(!(year == max_isoyear & week > last_week))
-
-  week_year_grid %>%
-    left_join(ts_aggregated, by = c("week", "year")) %>%
-    replace_na(list(cases = 0))
+isoweek_to_date <- function(week, year) {
+  # Format the ISO week string
+  iso_week_str <- sprintf("%d-W%02d-1", year, week)
+  
+  # Convert to date (the first day of the ISO week)
+  date <- ISOweek::ISOweek2date(iso_week_str)
+  return(date)
 }
