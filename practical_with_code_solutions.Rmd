@@ -457,7 +457,8 @@ input_aggr <- data_linelist %>%
 ### Task 4.1.2
 Do you think we are done now? Do you have any thoughts what could be a problem here? Please stop for a second before continuing to read to think about this.
 
-If there are some weeks where no cases were reported these weeks will be missing in the `input_aggr`. We will apply a function which is provided in the source script which adds these missing weeks with number of cases set to 0. 
+If there are some weeks where no cases were reported these weeks will be missing in the `input_aggr`. We will apply a function which is part of the SignalDetectionTool which adds these missing weeks with number of cases set to 0.   
+Additional info: In case you want to have a look at the function code later you can type `SignalDetectionTool::add_missing_isoweeks` into the console or look at the code on Github https://github.com/United4Surveillance/signal-detection-tool/blob/main/R/data_processing.R .
 ```{r,fill-missing-weeks}
 input_aggr_complete <- add_missing_isoweeks(input_aggr)
 ```
@@ -504,7 +505,7 @@ In the process of aggregation age_group would need to be added to the variables 
 
 ## Section 4.2: Usage of functions from the SignalDetectionTool
 
-The R library SignalDetectionTool which was developed within the Joint Action United4Surveillance provides functions for you to simplify this process. We start again with the linelist of cases and apply the earsC algorithm to it but we use functions from the tool.
+The R library SignalDetectionTool which was developed within the Joint Action United4Surveillance provides functions for you to simplify this process. You already used one of the functions `add_missing_isoweeks()` in the previous task 4.1.2. We start again with the linelist of cases and apply the earsC algorithm to it but we use functions from the tool.
 
 ```{r,apply-ears-tool}
 ears_results_tool <- data_linelist %>%
