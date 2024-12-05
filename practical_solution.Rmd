@@ -101,6 +101,11 @@ detect_outbreaks <- function(ts, method) {
 }
 ```
 
+**Note and advice for facilitators:**  
+
+We are not talking about bias in the computed expectation due to past outbreaks in the time series because we did not want to add this level of complexity to the practical. If fellows realise or ask that the expectation is biased upwards due to past outbreaks you can tell them that this observation is correct and that this is taken care of in a lot of the typically used algorithms (i.e. weighted regression applied in FarringtonFlexible or an easier method is to remove those past outbreaks from the data). In this practical we ignore this problem to keep it simple. 
+
+
 ## Task 1.3
 
 Now apply the `detect_outbreaks()` function for outbreak detection to the time series using the method "average" and plot the result using `plot_ts()` with the additional argument `with_signals = TRUE`. Does what you observe match your expectations?
