@@ -24,7 +24,8 @@ By the end of this session, participants should be able to:
 ## Preparations
 
 Required source code to load.
-In case participants could not install the package SignalDetectionTool they can source the code source_signaldetectiontool.R which has all functions required for Section 4.2. . 
+In case participants could not install the package SignalDetectionTool they can source the code source_signaldetectiontool.R which has all functions required for Section 4.2. .  
+In case some fellows were not able to install the SignalDetectionTool package they can source the script source_signaldetectiontool.R which is commented below.
 
 ```{r, include = TRUE, source-Rscript}
 source("source_outbreak_det.R")
