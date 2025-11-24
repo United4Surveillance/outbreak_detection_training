@@ -19,17 +19,14 @@ By the end of this session, participants should be able to:
 
 - implement & apply different outbreak detection methods to time series with different characteristics and understand advantages and disadvantages of different methods
 
-- get to know the SignalDetectionTool and be able to use functions for outbreak detection from the tool as well as the shiny app
+- get to know the SignalDetectionTool and apply it to a real dataset to identify outbreaks
 
 ## Preparations
 
 Required source code to load.
-In case participants could not install the package SignalDetectionTool they can source the code source_signaldetectiontool.R which has all functions required for Section 4.2. .  
-In case some fellows were not able to install the SignalDetectionTool package they can source the script source_signaldetectiontool.R which is commented below.
 
 ```{r, include = TRUE, source-Rscript}
 source("source_outbreak_det.R")
-# source("source_signaldetectiontool.R")
 ```
 
 Required packages
@@ -37,9 +34,6 @@ Required packages
 ```{r, load-packages, include = TRUE}
 library(dplyr)
 library(ggplot2)
-library(lubridate)
-library(surveillance)
-library(tidyr)
 library(SignalDetectionTool)
 ```
 
@@ -48,7 +42,7 @@ library(SignalDetectionTool)
 We will now import the first data set to analyse.
 
 ```{r, load-dataset}
-ts0 <- readRDS("data/sim0.Rds")
+ts1 <- readRDS("data/sim3.Rds")
 ```
 
 ## Task 1.1 
@@ -56,50 +50,43 @@ Visualise the first time series ts0 using the function `plot_ts()` which is prov
 What do you observe? What characteristics does this time series have? Do you see any potential outbreaks?
 
 ```{r, vis-dataset-task-1.1}
-plot_ts(ts0)
+plot_ts(ts1)
 ```
-No specific patterns (no obvious trend, no seasonality) thus stationary time series. Some potential outbreaks at the end of the time series and in spring 2019.
+
+
+Seasonal structure. Outbreak at the end and potentially also in summer 2019.
 
 ## Task 1.2
 
 We want to apply a simple outbreak detection method to the last time point of this time series.
-The baseline/expectation should be the mean of all observations before current time point. For calculating a threshold we are going to use the 95% quantile of the Poisson distribution. As later in this practical we want to add other algorithms we have an additional parameter called method. 
-Please fill all the spots with ____ to make this function work. 
+The baseline/expectation should be the mean of all observations before current time point. Fill in the blanks to obtain the baseline and plot the time series together with the baseline.
 
 ```{r, outbreak-detection-algo-task-1.2}
-detect_outbreaks <- function(ts, method) {
-  length_ts <- nrow(ts)
-  # split the data set
-  # data points we use for model fitting, i.e. we build our expectation on
-  fit_data <- ts[1:(length_ts - 1), ]
-  # the last data point we want to do signal detection for
-  pred_data <- ts[length_ts, ]
+# split the data set
+# data points we use for model fitting, i.e. we build our expectation on are all except the last one
+fit_data <- ts1 %>% head(-1)
+# the last data point we want to do signal detection for
+pred_data <- ts1 %>% tail(1)
 
-  # fit the model
-  if (method == "average") {
-    model <- glm(formula = cases ~ 1, data = fit_data, family = poisson())
-  }
-  # we generate an expectation and threshold for visualisation purposes for the data used for fitting
-  # model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
-  fit_data <- fit_data %>% mutate(
-    expectation = model$fitted.values,
-    threshold = qpois(0.95, expectation),
-    alarms = NA_real_
-  )
-
-  # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model, newdata = pred_data)
-
-  pred_data <- pred_data %>%
-    mutate(
-      expectation = exp(pred),
-      threshold = qpois(0.95, expectation),
-      alarms = pred_data$cases > threshold
+# fit the model
+model <- glm(formula = cases ~ 1, data = fit_data, family = poisson())
+# we generate an expectation for visualisation purposes for the data used for fitting
+# model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
+fit_data <- fit_data %>% 
+  mutate(
+    expectation = model$fitted.values
     )
 
-  # combine the two data sets back together
-  bind_rows(fit_data, pred_data)
-}
+# based on the model make predictions for the last data point which we want to do signal detection for
+pred <- predict.glm(model, newdata = pred_data)
+
+pred_data <- pred_data %>%
+  mutate(
+    expectation = exp(pred)
+    )
+
+# combine the two data sets back together
+data_with_baseline <- bind_rows(fit_data, pred_data)
 ```
 
 **Note and advice for facilitators:**  
@@ -109,449 +96,193 @@ We are not talking about bias in the computed expectation due to past outbreaks 
 
 ## Task 1.3
 
-Now apply the `detect_outbreaks()` function for outbreak detection to the time series using the method "average" and plot the result using `plot_ts()` with the additional argument `with_signals = TRUE`. Does what you observe match your expectations?
+Now plot the time series with expectation using `plot_ts()`. Does what you observe match your expectations? Do you think this is a good fit?
 
 ```{r,apply-detect-outbreaks-task-1.3}
-signals_average <- detect_outbreaks(ts0, method = "average")
-plot_ts(signals_average, with_signals = TRUE)
+
+plot_ts(data_with_baseline)
+
 ```
+
+
 Observations:
-We see a constant average as computed expectation. The last time point is marked as outbreak which is expected as it was a peak compared to what was observed before in the time series. 
+We see a constant average as computed expectation. The expectation did average out the low and high season. We do not think that this baseline fits our timeseries well. 
 
-# Section 2:  Apply the outbreak detection to multiple weeks
+## Task 1.4
 
-We want to extend the algorithm so that it can not only be applied to the most recent week but multiple past weeks. For this we implement a function which consists of for-loop around our function `detect_outbreaks()`. 
+In the next step we calculate a threshold based on the 95% quantile of the Poisson distribution around the expected value of the last data point and add it to our pred_data. For visualisation purpose we also extend the threshold into the past.
+Please fill all the spots with ____ to make the code work.
+
+```{r, threshold-1.4}
+fit_data <- fit_data %>%
+  mutate(
+    threshold = qpois(0.95,expectation)
+    )
+
+pred_data <- pred_data %>%
+  mutate(
+    threshold = qpois(0.95,expectation)
+    )
+
+# bind fit and pred data together
+
+data_with_baseline_and_threshold <- bind_rows(fit_data, pred_data)
+```
+
+Please plot the time series with the expectation and the threshold. 
+
+```{r, plot_baseline_threshold-1.4}
+plot_ts(data_with_baseline_and_threshold)
+
+```
+
+## Task 1.5
+
+Lastly we want to generate signals. Signals are those case numbers that exceed the threshold. As we are performing outbreak detection for the last time point we only want to generate a signal for this time point. Please fill the blanks to add a signal to the pred_data.
+
+```{r, signals-1.5}
+
+pred_data <- pred_data %>% mutate(alarms = pred_data$cases > threshold)
+
+# bind results together
+data_with_signals <- bind_rows(fit_data, pred_data)
+  
+```
+
+## Task 1.6
+Now we plot all elements we computed for the outbreak detection. Do you think this algorithm is suited for this timeseries? 
+Do you have any suggestions for improvement? Discuss.
+
+```{r, plot_ts_signals-1.6}
+
+plot_ts(data_with_signals)
+
+```
+
+No signal was generated as the case number is below the threshold. This method is not suited for this seasonal timeseries as it does not capture this feature would miss outbreaks in the low season and would often classify the peak of the season as an outbreak.
+
+# Section 2: Improve the algorithm 
 
 ## Task 2.1
-Please fill the ____ in this function. 
-```{r, outbreak-detection-multiple-weeks-task-2.1}
-detect_outbreaks_multiple_weeks <- function(ts, method, number_of_weeks = 4) {
-  signal_results <- data.frame()
-  len_ts <- nrow(ts)
 
-  for (i in seq(0, number_of_weeks - 1, 1)) {
-    ts <- ts[1:(len_ts - i), ]
-
-    ts_with_signals <- detect_outbreaks(ts, method = method)
-
-    signals <- ts_with_signals %>%
-      tail(1)
-    signal_results <- bind_rows(signal_results, signals)
-
-    if (i == number_of_weeks - 1) {
-      # want to get the modeled expectation and threshold for the data used for fitting as well
-      # take the results from the time series with the earliest time point where signals are generated for
-      ts_without_signal_weeks <- ts_with_signals[1:(nrow(ts_with_signals) - 1), ]
-    }
-  }
-  # put time series and signal results together in one df
-  ts_without_signal_weeks %>%
-    bind_rows(signal_results) %>%
-    arrange(date)
-}
-```
-
-## Task 2.2
-
-Apply the `detect_outbreaks_multiple_weeks()` to the ts0 using the method "average" for the most recent 4 weeks and visualise the result.
-
-```{r, average-multiple-weeks-task-2.2}
-ts0_signals_4_weeks <- detect_outbreaks_multiple_weeks(ts0, method = "average")
-plot_ts(ts0_signals_4_weeks, with_signals = TRUE)
-```
-
-# Section 3: Improve the first simple outbreak detection algorithm
-
-We will split into groups now and each group obtains a different time series. Please discuss within your groups and work together. At the end one person of each group will give a short (max 5 min) presentation of the results to everyone in the plenum. Please only work on the parts of this .rmd which belongs to your group.
-
-## Group 1: 
-
-We now load another time series and visualise it. 
-
-```{r,group-1-timeseries-vis}
-ts1 <- readRDS("data/sim1.Rds")
-plot_ts(ts1)
-```
-
-### Task 3.1
-How would you describe this time series? What characteristics do you see?
-
-Increasing time trend and small outbreak at the end.
-
-### Task 3.2
-Apply the simple average outbreak detection algorithm to this time series for the last 4 weeks and plot the results. 
-
-```{r,group-1-average-application}
-ts1_with_signals_average <- detect_outbreaks_multiple_weeks(ts1, method = "average")
-plot_ts(ts1_with_signals_average, with_signals = TRUE)
-```
-
-### Task 3.3
-What do you observe? Do you think this algorithm is suited for this time series? 
-
-No it is not suited as it is not modeling the time trend. We would get a lot of false alarms just because of the increasing case numbers because of the time trend.
-
-### Task 3.4
-What are your ideas to improve this algorithm? Discuss in the group.
-
-Add a time trend term to the regression.
-
-### Task 3.5
-Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
-```{r,group-1-new-algo-task-3.5}
-detect_outbreaks <- function(ts, method) {
-  length_ts <- nrow(ts)
-  # split the data set
-  # data points we use for model fitting, i.e. we build our expectation on
-  fit_data <- ts[1:(length_ts - 1), ]
-  # the last data point we want to do signal detection for
-  pred_data <- ts[length_ts, ]
-
-  # fit the model depending on the chosen method
-  if (method == "average") {
-    model <- glm(formula = cases ~ 1, data = fit_data, family = poisson())
-  } else if (method == "timetrend") {
-    model <- glm(formula = cases ~ 1 + time, data = fit_data, family = poisson())
-  }
-  # we generate an expectation and threshold for visualisation purposes for the data used for fitting
-  # model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
-  fit_data <- fit_data %>% mutate(
-    expectation = model$fitted.values,
-    threshold = qpois(0.95, expectation),
-    alarms = NA_real_
-  )
-
-  # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model, newdata = pred_data)
-
-  pred_data <- pred_data %>%
-    mutate(
-      expectation = exp(pred),
-      threshold = qpois(0.95, expectation),
-      alarms = pred_data$cases > threshold
-    )
-
-  # combine the two data sets back together
-  bind_rows(fit_data, pred_data)
-}
-```
-
-### Task 3.6
-
-Apply your new method to the time series for the last 4 weeks and visualise the result.
-
-```{r,group-1-new-algo-application-task-3.6}
-ts1_with_signals_timetrend <- detect_outbreaks_multiple_weeks(ts1, method = "timetrend")
-plot_ts(ts1_with_signals_timetrend, with_signals = TRUE)
-```
-### Task 3.7
-Did this improve the outbreak detection? 
-
-Yes because now the time trend is modeled as well and when using the average a lot of time points in the past would have been labeled as outbreaks which are not real outbreaks.
-
-### Task 3.8
-Prepare to give a max. 5min presentation of your findings to the plenum. 
-
-## Group 2:
-We now load another time series and visualise it.
-```{r,group-2-timeseries-vis}
-ts2 <- readRDS("data/sim2.Rds")
-plot_ts(ts2)
-```
-
-### Task 3.1
-
-How would you describe this time series? What characteristics do you see?
-
-Falling time trend. Outbreak at the end.
-
-### Task 3.2
-Apply the simple average outbreak detection algorithm to this time series for the last 4 weeks and plot the results. 
-```{r,group-2-average-application-task-3.2}
-ts2_with_signals_average <- detect_outbreaks_multiple_weeks(ts2, method = "average")
-plot_ts(ts2_with_signals_average, with_signals = TRUE)
-```
-
-### Task 3.3
-What do you observe? Do you think this algorithm is suited for this time series? 
-
-No it is not suited as it is not modeling the time trend. We are missing the outbreak at the end due to not modeling this.
-
-### Task 3.4
-What are your ideas to improve this algorithm? Discuss in the group.
-
-Add a time trend to the model.
-
-### Task 3.5
-Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
-```{r,group-2-new-algo-task-3.5}
-detect_outbreaks <- function(ts, method) {
-  length_ts <- nrow(ts)
-  # split the data set
-  # data points we use for model fitting, i.e. we build our expectation on
-  fit_data <- ts[1:(length_ts - 1), ]
-  # the last data point we want to do signal detection for
-  pred_data <- ts[length_ts, ]
-
-  # fit the model depending on the chosen method
-  if (method == "average") {
-    model <- glm(formula = cases ~ 1, data = fit_data, family = poisson())
-  } else if (method == "timetrend") {
-    model <- glm(formula = cases ~ 1 + time, data = fit_data, family = poisson())
-  }
-  # we generate an expectation and threshold for visualisation purposes for the data used for fitting
-  # model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
-  fit_data <- fit_data %>% mutate(
-    expectation = model$fitted.values,
-    threshold = qpois(0.95, expectation),
-    alarms = NA_real_
-  )
-
-  # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model, newdata = pred_data)
-
-  pred_data <- pred_data %>%
-    mutate(
-      expectation = exp(pred),
-      threshold = qpois(0.95, expectation),
-      alarms = pred_data$cases > threshold
-    )
-
-  # combine the two data sets back together
-  bind_rows(fit_data, pred_data)
-}
-```
-
-### Task 3.6
-
-Apply your new method to the time series for the last 4 weeks and visualise the result.
-
-```{r,group-2-new-algo-application-task-3.6}
-ts2_with_signals_timetrend <- detect_outbreaks_multiple_weeks(ts2, method = "timetrend")
-plot_ts(ts2_with_signals_timetrend, with_signals = TRUE)
-```
-
-### Task 3.7
-
-Did this improve the outbreak detection? 
-
-Yes the outbreak in the end is no longer missed because we are able to model the trend over time.
-
-### Task 3.8
-Prepare to give a max. 5min presentation of your results to the plenum. 
-
-## Group 3:
-We now load another time series and visualise it. 
-
-```{r,group-3-timeseries-vis}
-ts3 <- readRDS("data/sim3.Rds")
-plot_ts(ts3)
-```
-
-### Task 3.1
-How would you describe this time series? What characteristics do you see?
-
-Seasonal structure. Outbreak at the end.
-
-### Task 3.2
-
-Apply the simple average outbreak detection algorithm to this time series for the last 4 weeks and plot the results. 
-
-```{r,group-3-average-application}
-ts3_with_signals_average <- detect_outbreaks_multiple_weeks(ts3, method = "average")
-plot_ts(ts3_with_signals_average, with_signals = TRUE)
-```
-
-### Task 3.3
-What do you observe? Do you think this algorithm is suited for this time series? 
-
-The algorithm misses the seasonal structure and the outbreak at the end. No it is not suited.
-
-### Task 3.4
-What are your ideas to improve this algorithm? Discuss in the group.
-
-Add seasonal terms to the regression using sine and cosine.
-
-### Task 3.5
-Implement your idea. If possible use the `detect_outbreaks()` function with a different method parameter. 
-
-
-```{r,group-3-new-algo-task-3.5}
-detect_outbreaks <- function(ts, method) {
-  length_ts <- nrow(ts)
-  # split the data set
-  # data points we use for model fitting, i.e. we build our expectation on
-  fit_data <- ts[1:(length_ts - 1), ]
-  # the last data point we want to do signal detection for
-  pred_data <- ts[length_ts, ]
-
-  # fit the model depending on the chosen method
-  if (method == "average") {
-    model <- glm(formula = cases ~ 1, data = fit_data, family = poisson())
-  } # first solution using sin and cos
-  else if (method == "seasonality") {
-    model <- glm(formula = cases ~ 1 + sin + cos, data = fit_data, family = poisson())
-  } # second solution using the month factor
-  else if (method == "seasonality_month") {
-    model <- glm(formula = cases ~ 1 + month, data = fit_data, family = poisson())
-  }
-
-
-
-  # we generate an expectation and threshold for visualisation purposes for the data used for fitting
-  # model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
-  fit_data <- fit_data %>% mutate(
-    expectation = model$fitted.values,
-    threshold = qpois(0.95, expectation),
-    alarms = NA_real_
-  )
-
-  # extend the fitted model (make predictions) for the last data point which we want to do signal detection for
-  pred <- predict.glm(model, newdata = pred_data)
-
-  pred_data <- pred_data %>%
-    mutate(
-      expectation = exp(pred),
-      threshold = qpois(0.95, expectation),
-      alarms = pred_data$cases > threshold
-    )
-
-  # combine the two data sets back together
-  bind_rows(fit_data, pred_data)
-}
-```
-
-### Task 3.6
-Apply your new method to the time series for the last 4 weeks and visualise the result.
-
-Solution 1 using sin and cos
-```{r,group-3-new-algo-application-task-3.6}
-ts3_with_signals_season <- detect_outbreaks_multiple_weeks(ts3, method = "seasonality")
-plot_ts(ts3_with_signals_season, with_signals = TRUE)
-```
-
-Solution 2 using month
-```{r,group-3-new-algo-application-task-3.6-solution2}
-ts3_with_signals_season_month <- detect_outbreaks_multiple_weeks(ts3, method = "seasonality_month")
-plot_ts(ts3_with_signals_season_month, with_signals = TRUE)
-```
-
-### Task 3.7
-Did this improve the outbreak detection? 
-
-Yes the outbreak is now found which was not identified before because the model did not have seasonal terms and the peak was below the average.
-
-### Task 3.8
-Prepare to give a max. 5min presentation of your results to the plenum.
-
-# Section 4: From linelist to signals
-## Section 4.1: Using dplyr and the surveillance package
-
-In the previous section you were always provided data sets which were already showing aggregated case counts by week and year. In the real world you will often start with a line list of cases and need to aggregate it first to apply signal detection methods. In a previous practical of this module you already learned how to get from a line list to an aggregated time series. We will shortly refresh this knowledge here and then further build and extend on it.
-
-```{r,load-linelist}
-# Load the data set
-data_linelist <- read.csv("data/linelist.csv")
-```
-
-### Task 4.1.1
-Quickly familiarise yourself with the data set. What variables does it contain and how does it look like? 
-
-One line per case, we have dates such as date_report or date_onset where we could aggregate on. There are additional information for each case such as the pathogen the case had, age, sex, the region (county, state, ...).
-
-We will aggregate the data set to obtain the number of cases in each week of the year based on the reporting date `date_report`. 
-
-```{r,aggregate-linelist}
-input_aggr <- data_linelist %>%
+Improve the algorithm, have a look at the variables available in ts1. Please fill the gaps to implement the new algorithm. This time we directly compute the threshold and alarms as well in one step. 
+
+**Note for facilitators**: We remove all objects from the previous model from the environment so that the fellows start with a fresh environment and there is no confusion, i.e. the object already exists but it was actually not created in this section but before.
+```{r, improve_outbreak_det_method-2.1}
+# first we make a fresh environment
+rm(fit_data, pred_data, model, data_with_signals, envir = .GlobalEnv)
+
+# split the data set
+# data points we use for model fitting, i.e. we build our expectation on are all except the last one
+fit_data <- ts1 %>% head(-1)
+# the last data point we want to do signal detection for
+pred_data <- ts1 %>% tail(1)
+
+# fit the model
+model <- glm(formula = cases ~ 1 + sin + cos, data = fit_data, family = poisson())
+# we generate an expectation for visualisation purposes for the data used for fitting
+# model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
+fit_data <- fit_data %>% 
   mutate(
-    week = isoweek(date_report),
-    year = isoyear(date_report)
-  ) %>%
-  summarise(cases = n(), .by = c(week, year))
+    expectation = model$fitted.values,
+    threshold = qpois(0.95,expectation)
+    )
+
+# based on the model make predictions for the last data point which we want to do signal detection for
+pred <- predict.glm(model, newdata = pred_data)
+
+pred_data <- pred_data %>%
+  mutate(
+    expectation = exp(pred),
+    threshold = qpois(0.95,expectation),
+    alarms = pred_data$cases > threshold
+    )
+
+# combine the two data sets back together
+data_with_signals <- bind_rows(fit_data, pred_data)
+
 ```
 
-### Task 4.1.2
-Do you think we are done now? Do you have any thoughts what could be a problem here? Please stop for a second before continuing to read to think about this.
+Please plot the result and discuss what you see.
 
-If there are some weeks where no cases were reported these weeks will be missing in the `input_aggr`. We will apply a function which is part of the SignalDetectionTool which adds these missing weeks with number of cases set to 0.   
-Additional info: In case you want to have a look at the function code later you can type `SignalDetectionTool::add_missing_isoweeks` into the console or look at the code on Github https://github.com/United4Surveillance/signal-detection-tool/blob/main/R/data_processing.R .
-```{r,fill-missing-weeks}
-input_aggr_complete <- add_missing_isoweeks(input_aggr)
+```{r, plot_improved_method-2.1}
+
+plot_ts(data_with_signals)
+
 ```
 
-### Task 4.1.3
-Is the `input_aggr_complete` longer than the original `input_aggr_complete`?
-In case you want to find out which row was added you could use the following code:
-```{r,find-out-added-week}
-input_aggr_complete %>% anti_join(input_aggr,input_aggr_complete, by = c("week","year"))
+Algorithm including seasonality fits better and the last time point is now correctly identified as outbreak.
+
+# Section 3: Optional Task 
+We want to do signal detection on another time series with different characteristics. Please plot the time series and describe it.
+
+```{r, ts2-3.1}
+# read in the time series 2
+ts2 <- readRDS("data/sim2.Rds")
+
+# Plot the time series 2
+plot_ts(ts2)
+
 ```
 
-Now let's apply a outbreak detection method from the surveillance package. There are a lot of different R libraries containing signal detection methods and we want to shortly show you The surveillance package as it is a very popular package and still frequently used in this field.
+Downward time trend in the timeseries. Outbreak in the end.
 
-Unfortunately the surveillance package uses its own data format to apply outbreak detection to a time series and thus first we need to transform our aggregated time series into this "sts" format.
+## Task 3.2
 
-```{r,transform-to-sts}
-sts_timeseries <- sts(input_aggr_complete$cases,
-  start = c(
-    input_aggr_complete$year[1],
-    input_aggr_complete$week[1]
-  ),
-  frequency = 52
-)
+Think about a suitable model you would use to do outbreak detection for this time series and fill the gaps.
+**Advice for facilitators:**: If fellows struggle, then you can give a hint that they can look at the variables inside the ts2 dataset. There is a variable time that can be used to model a timetrend.
+
+```{r, ts2_signal_detection_3.2}
+# first we make a fresh environment
+rm(fit_data, pred_data, model, data_with_signals, envir = .GlobalEnv)
+
+# split the data set
+# data points we use for model fitting, i.e. we build our expectation on are all except the last one
+fit_data <- ts2 %>% head(-1)
+# the last data point we want to do signal detection for
+pred_data <- ts2 %>% tail(1)
+
+# fit the model
+model <- glm(formula = cases ~ 1 + time, data = fit_data, family = poisson())
+# we generate an expectation for visualisation purposes for the data used for fitting
+# model$fitted.values give the expected values based on the model already transformed using exp() (see documentation)
+fit_data <- fit_data %>% 
+  mutate(
+    expectation = model$fitted.values,
+    threshold = qpois(0.95,expectation)
+    )
+
+# based on the model make predictions for the last data point which we want to do signal detection for
+pred <- predict.glm(model, newdata = pred_data)
+
+pred_data <- pred_data %>%
+  mutate(
+    expectation = exp(pred),
+    threshold = qpois(0.95,expectation),
+    alarms = pred_data$cases > threshold
+    )
+
+# combine the two data sets back together
+data_with_signals <- bind_rows(fit_data, pred_data)
+
 ```
 
-### Task 4.1.4
-Apply the EarsC algorithm `earsC()` to the time series and plot the results using the `plot()` function from the surveillance package. Use the default values of both functions and look up how to use the functions using ?earsC() or ?plot()
+We build a model using a linear time trend. 
 
-```{r,apply-ears-surveillance-task-4.1.4}
-ears_results_surv <- earsC(sts_timeseries)
-# also talk about that the output here is again in sts format
-plot(ears_results_surv)
+## Task 3.3
+Plot your results and describe what you observe.
+
+```{r, ts2_signal_detection_plot_3.3}
+
+plot_ts(data_with_signals)
+
 ```
 
-### Task 4.1.5
-Have a look at the visualisation. Do you understand everything? If you have any questions about it discuss with your partner or ask one of the facilitators.
+We fitted a model with a decreasing time trend and are able to detect the outbreak at the end of the time series.
 
-### Task 4.1.6
-Let's say you are interested in more detailed analysis and want to stratify by age group. This means you want to apply signal detection methods to a time series for each age group. How would you need to change the steps above to do this? Discuss with a partner.
+# Section 4: Investigate the ESTEC outbreak in Germany 2025 using the SignalDetectionTool
 
-## Section 4.2: Usage of functions from the SignalDetectionTool
+You are the epidemiologist who is in charge of investigating whether there is an ESTEC outbreak going on in Germany and in which subgroups of the population this outbreak is taking place. Apply the SignalDetectionTool to the ESTEC Dataset from Germany in 2025 and find out more about case numbers and which subgroups are affected. Play around with different settings and try to understand the results which are shown in the app.
 
-The R library SignalDetectionTool which was developed within the Joint Action United4Surveillance provides functions for you to simplify this process. You already used one of the functions `add_missing_isoweeks()` in the previous task 4.1.2. We start again with the line list of cases and apply the earsC algorithm to it but we use functions from the tool.
+If you were not able to install the SignalDetectionTool you can use our generated HTML reports instead.  
 
-```{r,apply-ears-tool}
-ears_results_tool <- data_linelist %>%
-  preprocess_data() %>%
-  get_signals(method = "ears", number_of_weeks = 6)
-```
-
-As you can see we do not need to do add weeks and year to the data_line list, do not need to aggregate and transform to sts. All of this is done inside the functions `preprocess_data()` (adding of week and year and other preprocessing) and `get_signals()` (aggregating,transforming to sts if necessary,...) .
-
-We can now plot the results using the plotting function from the SignalDetectionTool.
-```{r,vis-ears-tool}
-plot_time_series(ears_results_tool, interactive = TRUE)
-```
-
-Now let's do the desired stratified analysis by age group.
-
-### Task 4.2.1
-Have a look at the parameters of `get_signals()` and add the necessary parameter for getting signals for each age group in our data set.
-
-```{r,apply-ears-agegroup-tool-task-4.2.1}
-ears_agegroup_results_tool <- data_linelist %>%
-  preprocess_data() %>%
-  get_signals(method = "ears", number_of_weeks = 6, stratification = "age_group")
-```
-
-### Task 4.2.3
-Have a look at the signal results data frame `ears_agegroup_results_tool` and visualise one age group of your choice using the `plot_time_series()` function.
-```{r,vis-ears-agegroup-tool-task-4.2.3}
-plot_time_series(ears_agegroup_results_tool %>% filter(stratum == "00-04"), interactive = TRUE)
-```
-
-## Section 4.3: Usage of the shiny app SignalDetectionTool
-Now we want to go even one step further and use the shiny app SignalDetectionTool.
-In general to start the tool you need to load the package SignalDetectionTool using `library(SignalDetectionTool)` (we already did this here) and then type `run_app()` into your Console in Rstudio.
-
-### Task 4.3.1
-Run the app and upload the linelist.csv inside the data folder and perform signal analysis stratified by age_group, sex and county.
